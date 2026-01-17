@@ -4,7 +4,7 @@ import signal
 import sys
 
 
-from google.api_core.exceptions import NotFound
+from google.api_core.exceptions import NotFound, DeadLineExceeded
 from google.cloud import pubsub_v1
 from google.cloud import bigquery
 
@@ -55,18 +55,16 @@ def main():
     print("Starting batch pull job...")
 
     while True:
-        response = subscriber.pull(
-            request={
-                "subscription": subscription_path,
-                "max_messages": MAX_MESSAGES,
-            },
-            timeout=PULL_TIMEOUT,
-        )
-
-        if not response.received_messages:
-            print("No messages left, exiting")
+        try:
+            response = subscriber.pull(
+                request={
+                    "subscription": subscription_path,
+                    "max_messages": MAX_MESSAGES,
+                },
+                timeout=PULL_TIMEOUT,
+            )
+        except DeadLineExceeded:
             break
-
 
         for received_message in response.received_messages:
             ack_id = received_message.ack_id
